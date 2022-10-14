@@ -1,8 +1,24 @@
 ﻿@page "/"
 @namespace BlazorCookie.Server.Pages
+@using BlazorCookie.Server.Helpers
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
 @{
     Layout = "_Layout";
 }
 
-<component type="typeof(App)" render-mode="ServerPrerendered" />
+@*
+    Requesting the Antiforgery token, at this point we can acess the HTTP contexts
+*@
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Xsrf
+
+@*
+    Execute some code for getting the Xsrf token and then we need to pass it to our blazor app in the "component" tag
+*@
+@{
+    var initialTokenState = new InitialApplicationState
+            {
+                XsrFToken = Xsrf.GetAndStoreTokens(HttpContext).RequestToken,
+                Cookie = HttpContext.Request.Cookies[".AspNetCore.Cookies"] // cookies collection of the request
+            };
+}
+<component type="typeof(App)" render-mode="ServerPrerendered" param-InitialState="initialTokenState"/>

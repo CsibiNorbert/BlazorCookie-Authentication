@@ -1,4 +1,8 @@
 ﻿@page "/counter"
+@using System.Text.Json
+
+@*This will block completely the access to this page if you are not authorized/loggedin*@
+@attribute [Authorize]
 
 <PageTitle>Counter</PageTitle>
 
@@ -6,13 +10,71 @@
 
 <p role="status">Current count: @currentCount</p>
 
+@if (!String.IsNullOrEmpty(apiResult))
+   {
+       <p>@apiResult</p>
+   }
+
+
+@if (!String.IsNullOrEmpty(ex))
+   {
+       <p>@ex</p>
+   }
+
 <button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
+<button class="btn btn-secondary" @onclick="DummyApiCall">API Auth</button>
 
 @code {
     private int currentCount = 0;
+    private string apiResult = string.Empty;
+    private string ex = string.Empty;
 
-    private void IncrementCount()
+    // For example, this can be used to show something only when the user is Norbert, or it has a specific role
+    [CascadingParameter]
+    Task<AuthenticationState> authStateTask { get; set; }
+
+    [Inject]
+    IHttpClientFactory _httpClientFactory { get; set; }
+
+    [Inject]
+    TokenProvider _tokenProvider { get; set; }
+
+    private async Task IncrementCount()
     {
-        currentCount++;
+        var authenticationState = await authStateTask; // This is the same auth state as we use in the HTML like so:(@context.User.Identity?.Name)
+
+        if (authenticationState.User.Identity.Name == "Norbert")
+        {
+            currentCount++;
+        }
+    }
+
+    private async Task DummyApiCall()
+    {
+        var httpClient = _httpClientFactory.CreateClient("dummyAuth");
+
+        // Name os the header is cookie and the value is the whole .AspNetCore.Cookies + cookie
+        httpClient.DefaultRequestHeaders.Add("Cookie", ".AspNetCore.Cookies="+ _tokenProvider.Cookie);
+
+        var httpResponseMessage = await httpClient.GetAsync(
+            "api/dummy");
+
+        try
+        {
+            if (httpResponseMessage.IsSuccessStatusCode)
+            {
+                using var contentStream =
+                    await httpResponseMessage.Content.ReadAsStreamAsync();
+
+                apiResult = await httpResponseMessage.Content.ReadAsStringAsync();
+                //apiResult = await JsonSerializer.DeserializeAsync
+                //    <string>(contentStream);
+            }
+        }
+        catch (Exception e)
+        {
+            ex = e.Message;
+        }
+        
     }
 }

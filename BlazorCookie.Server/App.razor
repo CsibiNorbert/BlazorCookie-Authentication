@@ -1,12 +1,36 @@
-﻿<Router AppAssembly="@typeof(App).Assembly">
-    <Found Context="routeData">
-        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
-        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
-    </Found>
-    <NotFound>
-        <PageTitle>Not found</PageTitle>
-        <LayoutView Layout="@typeof(MainLayout)">
-            <p role="alert">Sorry, there's nothing at this address.</p>
-        </LayoutView>
-    </NotFound>
-</Router>
+﻿@inject TokenProvider TokenProvider
+
+@code{
+    // This parameter matches the one we pass into the app inside host after "param-" prefix.
+    // This ensures that the value gets filled
+    [Parameter]
+    public InitialApplicationState InitialState {get; set; }
+
+    protected override Task OnInitializedAsync()
+    {
+        TokenProvider.XsrFToken = InitialState.XsrFToken;
+        TokenProvider.Cookie = InitialState.Cookie;
+
+        return base.OnInitializedAsync();
+    }
+}
+<CascadingAuthenticationState>
+    <Router AppAssembly="@typeof(App).Assembly">
+        <Found Context="routeData">
+            @*<RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />*@
+            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)"> @*We use the AuthorizeRouteView when we use the attribute authorize to restrict access to certain pages if not logged in*@
+                <NotAuthorized>
+                    <h1>Sorry, you are not authorized to view this page.</h1>
+                    <p>You may want to try logging in</p>
+                </NotAuthorized>
+            </AuthorizeRouteView>
+            <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+        </Found>
+        <NotFound>
+            <PageTitle>Not found</PageTitle>
+            <LayoutView Layout="@typeof(MainLayout)">
+                <p role="alert">Sorry, there's nothing at this address.</p>
+            </LayoutView>
+        </NotFound>
+    </Router>
+</CascadingAuthenticationState>
